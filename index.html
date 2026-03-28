@@ -5,111 +5,498 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LILA BLACK — Player Journey Visualizer</title>
 <style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+
+  :root {
+    --bg-base:      #080b10;
+    --bg-surface:   #0e1219;
+    --bg-elevated:  #141924;
+    --bg-hover:     #1a2233;
+    --border:       #1f2d42;
+    --border-lit:   #2a3f5f;
+    --accent:       #00d4ff;
+    --accent-dim:   rgba(0,212,255,0.12);
+    --accent-glow:  rgba(0,212,255,0.35);
+    --text-primary: #e8f0fe;
+    --text-secondary: #6b82a0;
+    --text-muted:   #3d5068;
+    --red:    #ff3d5a;
+    --orange: #ff8c42;
+    --yellow: #ffd23f;
+    --green:  #39ff85;
+    --purple: #bf5fff;
+    --cyan:   #00d4ff;
+    --blue:   #4d8bff;
+  }
+
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: #0d0f14; color: #e2e8f0; font-family: 'Segoe UI', system-ui, sans-serif; display: flex; height: 100vh; overflow: hidden; }
+
+  body {
+    background: var(--bg-base);
+    color: var(--text-primary);
+    font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+    font-size: 13px;
+  }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border-lit); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
 
   /* ── Sidebar ── */
   #sidebar {
-    width: 280px; min-width: 280px; background: #161a24; border-right: 1px solid #2a2f3e;
-    display: flex; flex-direction: column; overflow-y: auto; z-index: 10;
+    width: 272px;
+    min-width: 272px;
+    background: var(--bg-surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    overflow-x: hidden;
+    z-index: 10;
   }
-  #sidebar-header { padding: 16px; background: #1e2330; border-bottom: 1px solid #2a2f3e; }
-  #sidebar-header h1 { font-size: 15px; font-weight: 700; color: #fff; letter-spacing: 0.5px; }
-  #sidebar-header p { font-size: 11px; color: #64748b; margin-top: 2px; }
 
-  .section { padding: 14px 16px; border-bottom: 1px solid #1e2330; }
-  .section-title { font-size: 10px; font-weight: 700; color: #64748b; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 10px; }
-
-  select, button {
-    width: 100%; padding: 8px 10px; background: #1e2330; border: 1px solid #2a2f3e;
-    color: #e2e8f0; border-radius: 6px; font-size: 12px; cursor: pointer; margin-bottom: 6px;
+  #sidebar-header {
+    padding: 18px 16px 14px;
+    background: linear-gradient(180deg, #0a1520 0%, var(--bg-surface) 100%);
+    border-bottom: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
   }
-  select:focus, button:focus { outline: none; border-color: #4f7af8; }
-  button:hover { background: #252c3e; }
-  button.active { background: #1e3a8a; border-color: #4f7af8; color: #93c5fd; }
-  button.danger { background: #7f1d1d; border-color: #ef4444; color: #fca5a5; }
+  #sidebar-header::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  }
+  #sidebar-header .logo-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+  #sidebar-header .logo-icon {
+    width: 28px; height: 28px;
+    background: linear-gradient(135deg, var(--accent), #0080ff);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    box-shadow: 0 0 12px var(--accent-glow);
+    flex-shrink: 0;
+  }
+  #sidebar-header h1 {
+    font-size: 14px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: 0.5px;
+  }
+  #sidebar-header p {
+    font-size: 10px;
+    color: var(--text-secondary);
+    font-family: 'JetBrains Mono', monospace;
+    margin-top: 1px;
+    padding-left: 36px;
+  }
 
-  .toggle-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; cursor: pointer; }
-  .toggle-row input[type=checkbox] { accent-color: #4f7af8; width: 14px; height: 14px; cursor: pointer; }
-  .toggle-row label { font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; flex: 1; }
-  .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
-  .diamond { width: 10px; height: 10px; display: inline-block; transform: rotate(45deg); flex-shrink: 0; }
-  .cross { font-size: 12px; font-weight: bold; }
+  .section {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+  }
 
-  #stats-box { background: #1e2330; border-radius: 6px; padding: 10px; font-size: 11px; }
-  #stats-box .stat-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
-  #stats-box .stat-label { color: #64748b; }
-  #stats-box .stat-val { color: #e2e8f0; font-weight: 600; }
+  .section-title {
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--text-muted);
+    letter-spacing: 1.8px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  select {
+    width: 100%;
+    padding: 7px 10px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-lit);
+    color: var(--text-primary);
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    margin-bottom: 6px;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236b82a0'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 28px;
+    font-family: 'Inter', system-ui;
+    transition: border-color 0.15s;
+  }
+  select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-dim); }
+
+  button {
+    width: 100%;
+    padding: 8px 12px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-lit);
+    color: var(--text-primary);
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    margin-bottom: 6px;
+    font-family: 'Inter', system-ui;
+    transition: all 0.15s;
+    text-align: center;
+  }
+  button:hover { background: var(--bg-hover); border-color: var(--accent); color: var(--accent); }
+  button:last-child { margin-bottom: 0; }
+  button.primary {
+    background: linear-gradient(135deg, #0050a0, #0070cc);
+    border-color: #0099ee;
+    color: #c0e8ff;
+  }
+  button.primary:hover {
+    background: linear-gradient(135deg, #0060b8, #0088e8);
+    border-color: var(--accent);
+    color: #fff;
+    box-shadow: 0 0 12px rgba(0,150,255,0.3);
+  }
+  button.active {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: 0 0 8px var(--accent-glow);
+  }
+  button.danger {
+    background: rgba(255,61,90,0.1);
+    border-color: rgba(255,61,90,0.4);
+    color: var(--red);
+  }
+
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 5px;
+    padding: 4px 6px;
+    border-radius: 5px;
+    transition: background 0.12s;
+    cursor: pointer;
+  }
+  .toggle-row:hover { background: var(--bg-elevated); }
+  .toggle-row input[type=checkbox] {
+    accent-color: var(--accent);
+    width: 13px; height: 13px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .toggle-row label {
+    font-size: 11px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    flex: 1;
+    font-weight: 400;
+  }
+  .toggle-row:hover label { color: var(--text-primary); }
+  .dot {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+    box-shadow: 0 0 5px currentColor;
+  }
+
+  /* Stats box */
+  #stats-box {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 11px;
+  }
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 3px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .stat-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .stat-label { color: var(--text-secondary); }
+  .stat-val {
+    color: var(--text-primary);
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+  }
+  .stat-val.highlight { color: var(--accent); }
 
   /* Match list */
-  #match-list { max-height: 220px; overflow-y: auto; }
+  #match-list { max-height: 200px; overflow-y: auto; }
   .match-item {
-    padding: 8px 10px; border-radius: 6px; margin-bottom: 4px; cursor: pointer;
-    background: #1e2330; border: 1px solid transparent; font-size: 11px;
-    transition: all 0.15s;
+    padding: 8px 10px;
+    border-radius: 6px;
+    margin-bottom: 3px;
+    cursor: pointer;
+    background: var(--bg-elevated);
+    border: 1px solid transparent;
+    transition: all 0.12s;
   }
-  .match-item:hover { border-color: #4f7af8; }
-  .match-item.selected { background: #1e3a8a; border-color: #4f7af8; }
-  .match-item .mid { color: #94a3b8; font-family: monospace; font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .match-item .minfo { color: #64748b; font-size: 10px; margin-top: 2px; }
+  .match-item:hover { border-color: var(--border-lit); background: var(--bg-hover); }
+  .match-item.selected {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    box-shadow: 0 0 8px var(--accent-glow);
+  }
+  .match-item.selected .mid { color: var(--accent); }
+  .match-item .mid {
+    color: var(--text-secondary);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 3px;
+  }
+  .match-item .minfo { color: var(--text-muted); font-size: 10px; }
+  .match-item .mbadges {
+    display: flex;
+    gap: 5px;
+    margin-top: 4px;
+  }
+  .badge {
+    font-size: 9px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .badge.humans { background: rgba(77,139,255,0.2); color: #6ba3ff; }
+  .badge.bots   { background: rgba(191,95,255,0.2); color: #c88aff; }
+  .badge.events { background: rgba(0,212,255,0.1);  color: #5dd8ff; }
 
   /* Timeline */
-  #timeline-wrap { padding: 12px 16px; border-bottom: 1px solid #1e2330; }
-  #timeline { width: 100%; accent-color: #4f7af8; cursor: pointer; }
-  #timeline-labels { display: flex; justify-content: space-between; font-size: 10px; color: #64748b; margin-top: 4px; }
-  #play-btn { width: 100%; margin-top: 8px; background: #1e3a8a; border-color: #4f7af8; color: #93c5fd; }
-  #play-btn:hover { background: #1e40af; }
+  #timeline-wrap {
+    padding: 10px 14px 12px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-surface);
+  }
+  .tl-track {
+    position: relative;
+    margin-bottom: 4px;
+  }
+  #timeline {
+    width: 100%;
+    accent-color: var(--accent);
+    cursor: pointer;
+    height: 4px;
+  }
+  #timeline::-webkit-slider-track {
+    background: var(--bg-elevated);
+    height: 4px;
+    border-radius: 2px;
+  }
+  #timeline::-webkit-slider-thumb {
+    box-shadow: 0 0 6px var(--accent);
+  }
+  #timeline-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 9px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-muted);
+    margin-top: 5px;
+    margin-bottom: 8px;
+  }
+  #timeline-labels #tl-current { color: var(--accent); font-weight: 600; }
+  #play-btn {
+    background: linear-gradient(135deg, #003366, #004d99);
+    border-color: #0077cc;
+    color: #7dd3fc;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+  }
+  #play-btn:hover {
+    background: linear-gradient(135deg, #004080, #0066cc);
+    border-color: var(--accent);
+    color: #fff;
+    box-shadow: 0 0 10px rgba(0,180,255,0.25);
+  }
+  #play-btn.playing {
+    background: linear-gradient(135deg, #1a0030, #330066);
+    border-color: #9933ff;
+    color: #cc99ff;
+  }
 
   /* ── Main area ── */
   #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 
   #toolbar {
-    height: 44px; background: #161a24; border-bottom: 1px solid #2a2f3e;
-    display: flex; align-items: center; padding: 0 16px; gap: 12px;
+    height: 40px;
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    gap: 8px;
+    flex-shrink: 0;
   }
-  #toolbar span { font-size: 11px; color: #64748b; }
-  #toolbar .tag { background: #1e2330; border: 1px solid #2a2f3e; border-radius: 4px; padding: 3px 8px; font-size: 11px; }
-  #match-summary { display: flex; gap: 16px; margin-left: auto; }
-  .summary-pill { background: #1e2330; border-radius: 4px; padding: 3px 8px; font-size: 11px; }
+  .tag {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-lit);
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-size: 11px;
+    color: var(--text-secondary);
+    font-family: 'JetBrains Mono', monospace;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+  }
+  .tag.active { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+  .toolbar-sep { width: 1px; height: 20px; background: var(--border); flex-shrink: 0; }
+  #match-summary { display: flex; gap: 8px; margin-left: auto; }
+  .summary-pill {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
 
   #canvas-wrap {
-    flex: 1; position: relative; overflow: hidden; background: #0d0f14;
-    display: flex; align-items: center; justify-content: center;
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    background: #04060a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
-  #minimap-img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; }
-  #canvas-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+  #canvas-wrap::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 1;
+  }
+  #minimap-img {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    object-fit: contain;
+    z-index: 2;
+  }
+  #canvas-overlay {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 3;
+  }
 
   #empty-state {
-    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-    text-align: center; color: #374151;
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    z-index: 5;
+    pointer-events: none;
   }
-  #empty-state h2 { font-size: 20px; margin-bottom: 8px; }
-  #empty-state p { font-size: 13px; }
+  #empty-state .es-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.15;
+  }
+  #empty-state h2 {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+  #empty-state p {
+    font-size: 12px;
+    color: var(--text-muted);
+    opacity: 0.6;
+  }
 
   #loading-overlay {
-    position: absolute; inset: 0; background: rgba(13,15,20,0.85);
-    display: flex; align-items: center; justify-content: center; z-index: 100;
+    position: absolute;
+    inset: 0;
+    background: rgba(4,6,10,0.88);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    backdrop-filter: blur(3px);
   }
-  .spinner { width: 32px; height: 32px; border: 3px solid #2a2f3e; border-top-color: #4f7af8; border-radius: 50%; animation: spin 0.7s linear infinite; }
+  .spinner {
+    width: 36px; height: 36px;
+    border: 2px solid var(--border-lit);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    box-shadow: 0 0 14px var(--accent-glow);
+    margin-bottom: 12px;
+  }
   @keyframes spin { to { transform: rotate(360deg); } }
-  #loading-text { color: #94a3b8; margin-left: 12px; font-size: 13px; }
+  #loading-text {
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+  }
 
   /* Tooltip */
   #tooltip {
-    position: fixed; background: #1e2330; border: 1px solid #4f7af8; border-radius: 6px;
-    padding: 8px 12px; font-size: 11px; pointer-events: none; z-index: 200; display: none;
-    max-width: 220px;
+    position: fixed;
+    background: var(--bg-elevated);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 11px;
+    pointer-events: none;
+    z-index: 200;
+    display: none;
+    min-width: 160px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 12px var(--accent-glow);
   }
-  #tooltip .tt-title { font-weight: 700; color: #93c5fd; margin-bottom: 4px; }
-  #tooltip .tt-row { color: #94a3b8; }
-
-  /* Legend */
-  #legend { padding: 10px 16px; border-top: 1px solid #1e2330; }
-  .legend-row { display: flex; flex-wrap: wrap; gap: 8px; }
-  .legend-item { display: flex; align-items: center; gap: 4px; font-size: 10px; color: #64748b; }
-
-  scrollbar-width: thin;
-  scrollbar-color: #2a2f3e #0d0f14;
+  #tooltip .tt-title {
+    font-weight: 700;
+    color: var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    margin-bottom: 6px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+  #tooltip .tt-row {
+    color: var(--text-secondary);
+    margin-top: 3px;
+    font-size: 10px;
+  }
 </style>
 </head>
 <body>
@@ -117,7 +504,10 @@
 <!-- SIDEBAR -->
 <div id="sidebar">
   <div id="sidebar-header">
-    <h1>⚡ LILA BLACK</h1>
+    <div class="logo-row">
+      <div class="logo-icon">⚡</div>
+      <h1>LILA BLACK</h1>
+    </div>
     <p>Player Journey Visualizer</p>
   </div>
 
@@ -126,13 +516,27 @@
     <div class="section-title">Filters</div>
     <select id="map-select"><option value="">— Select Map —</option></select>
     <select id="date-select"><option value="">All Dates</option></select>
-    <button id="load-matches-btn">Load Matches</button>
+    <button class="primary" id="load-matches-btn">Load Matches</button>
   </div>
 
   <!-- Match list -->
   <div class="section">
-    <div class="section-title">Matches <span id="match-count" style="color:#4f7af8"></span></div>
-    <div id="match-list"><p style="color:#4a5568;font-size:11px;">Select filters above and click Load Matches</p></div>
+    <div class="section-title">Matches <span id="match-count" style="color:var(--accent);margin-left:4px"></span></div>
+    <div id="match-list"><p style="color:var(--text-muted);font-size:11px;padding:4px 0;">Select filters above and click Load Matches</p></div>
+  </div>
+
+  <!-- Timeline -->
+  <div id="timeline-wrap">
+    <div class="section-title" style="padding:0;margin-bottom:8px;">Timeline</div>
+    <div class="tl-track">
+      <input type="range" id="timeline" min="0" max="100" value="100" step="1">
+    </div>
+    <div id="timeline-labels">
+      <span id="tl-min">0:00</span>
+      <span id="tl-current">—</span>
+      <span id="tl-max">—</span>
+    </div>
+    <button id="play-btn">▶  Play Match Timeline</button>
   </div>
 
   <!-- Event toggles -->
@@ -140,37 +544,37 @@
     <div class="section-title">Event Types</div>
     <div class="toggle-row">
       <input type="checkbox" id="tog-Position" checked>
-      <label for="tog-Position"><span class="dot" style="background:#3b82f6;opacity:0.5"></span> Movement (Human)</label>
+      <label for="tog-Position"><span class="dot" style="background:#4d8bff;color:#4d8bff"></span>Movement (Human)</label>
     </div>
     <div class="toggle-row">
       <input type="checkbox" id="tog-BotPosition">
-      <label for="tog-BotPosition"><span class="dot" style="background:#8b5cf6;opacity:0.5"></span> Movement (Bot)</label>
+      <label for="tog-BotPosition"><span class="dot" style="background:#bf5fff;color:#bf5fff"></span>Movement (Bot)</label>
     </div>
     <div class="toggle-row">
       <input type="checkbox" id="tog-Kill" checked>
-      <label for="tog-Kill"><span class="dot" style="background:#ef4444"></span> Kill (PvP)</label>
+      <label for="tog-Kill"><span class="dot" style="background:#ff3d5a;color:#ff3d5a"></span>Kill (PvP)</label>
     </div>
     <div class="toggle-row">
       <input type="checkbox" id="tog-Killed" checked>
-      <label for="tog-Killed"><span class="dot" style="background:#f97316"></span> Killed (PvP Death)</label>
+      <label for="tog-Killed"><span class="dot" style="background:#ff8c42;color:#ff8c42"></span>Killed (PvP Death)</label>
     </div>
     <div class="toggle-row">
       <input type="checkbox" id="tog-BotKill" checked>
-      <label for="tog-BotKill"><span class="dot" style="background:#eab308"></span> Bot Kill</label>
+      <label for="tog-BotKill"><span class="dot" style="background:#ffd23f;color:#ffd23f"></span>Bot Kill</label>
     </div>
     <div class="toggle-row">
       <input type="checkbox" id="tog-BotKilled" checked>
-      <label for="tog-BotKilled"><span class="dot" style="background:#a855f7"></span> Killed by Bot</label>
+      <label for="tog-BotKilled"><span class="dot" style="background:#bf5fff;color:#bf5fff"></span>Killed by Bot</label>
     </div>
     <div class="toggle-row">
       <input type="checkbox" id="tog-KilledByStorm" checked>
-      <label for="tog-KilledByStorm"><span class="dot" style="background:#06b6d4"></span> Storm Death</label>
+      <label for="tog-KilledByStorm"><span class="dot" style="background:#00d4ff;color:#00d4ff"></span>Storm Death</label>
     </div>
     <div class="toggle-row">
       <input type="checkbox" id="tog-Loot" checked>
-      <label for="tog-Loot"><span class="dot" style="background:#22c55e"></span> Loot</label>
+      <label for="tog-Loot"><span class="dot" style="background:#39ff85;color:#39ff85"></span>Loot</label>
     </div>
-    <button id="apply-filters-btn" style="margin-top:6px">Apply Filters</button>
+    <button id="apply-filters-btn" style="margin-top:8px">Apply Filters</button>
   </div>
 
   <!-- Heatmap -->
@@ -208,7 +612,7 @@
   <div class="section">
     <div class="section-title">Match Stats</div>
     <div id="stats-box">
-      <div class="stat-row"><span class="stat-label">Events</span><span class="stat-val" id="s-events">—</span></div>
+      <div class="stat-row"><span class="stat-label">Events</span><span class="stat-val highlight" id="s-events">—</span></div>
       <div class="stat-row"><span class="stat-label">Humans</span><span class="stat-val" id="s-humans">—</span></div>
       <div class="stat-row"><span class="stat-label">Bots</span><span class="stat-val" id="s-bots">—</span></div>
       <div class="stat-row"><span class="stat-label">PvP Kills</span><span class="stat-val" id="s-kills">—</span></div>
@@ -222,17 +626,11 @@
 <div id="main">
   <div id="toolbar">
     <span id="tb-map" class="tag">No map selected</span>
-    <span id="tb-match" class="tag">No match selected</span>
+    <div class="toolbar-sep"></div>
+    <span id="tb-match" class="tag" style="max-width:260px">No match selected</span>
     <div id="match-summary">
       <span class="summary-pill" id="pill-timeline">⏱ —</span>
     </div>
-  </div>
-
-  <!-- Timeline -->
-  <div id="timeline-wrap">
-    <input type="range" id="timeline" min="0" max="100" value="100" step="1">
-    <div id="timeline-labels"><span id="tl-min">0s</span><span id="tl-current">—</span><span id="tl-max">—</span></div>
-    <button id="play-btn">▶ Play Match Timeline</button>
   </div>
 
   <!-- Canvas -->
@@ -240,6 +638,7 @@
     <img id="minimap-img" src="" alt="" style="display:none">
     <canvas id="canvas-overlay"></canvas>
     <div id="empty-state">
+      <div class="es-icon">🗺</div>
       <h2>Select a match to begin</h2>
       <p>Choose a map and date from the sidebar, then select a match</p>
     </div>
@@ -261,8 +660,8 @@
 const state = {
   currentMap: null,
   currentMatch: null,
-  allEvents: [],        // raw events from API
-  visibleEvents: [],    // filtered by toggles + timeline
+  allEvents: [],
+  visibleEvents: [],
   heatmapData: null,
   timelineMax: 0,
   timelineVal: 100,
@@ -276,22 +675,22 @@ const state = {
   offsetY: 0,
 };
 
-// ─── Event config ─────────────────────────────────────────────────────────
+// ─── Event config — brighter, glowing ─────────────────────────────────────
 const EVENT_CFG = {
-  "Position":       { color: "#3b82f6", size: 2,  alpha: 0.35, shape: "circle" },
-  "BotPosition":    { color: "#8b5cf6", size: 2,  alpha: 0.25, shape: "circle" },
-  "Kill":           { color: "#ef4444", size: 7,  alpha: 0.9,  shape: "star"   },
-  "Killed":         { color: "#f97316", size: 7,  alpha: 0.9,  shape: "cross"  },
-  "BotKill":        { color: "#eab308", size: 6,  alpha: 0.9,  shape: "circle" },
-  "BotKilled":      { color: "#a855f7", size: 6,  alpha: 0.9,  shape: "circle" },
-  "KilledByStorm":  { color: "#06b6d4", size: 8,  alpha: 0.95, shape: "bolt"   },
-  "Loot":           { color: "#22c55e", size: 5,  alpha: 0.85, shape: "diamond"},
+  "Position":       { color: "#4d8bff", size: 2.5, alpha: 0.55, shape: "circle", glow: "rgba(77,139,255,0.6)"    },
+  "BotPosition":    { color: "#bf5fff", size: 2.5, alpha: 0.45, shape: "circle", glow: "rgba(191,95,255,0.5)"   },
+  "Kill":           { color: "#ff3d5a", size: 8,   alpha: 1.0,  shape: "star",   glow: "rgba(255,61,90,0.9)"    },
+  "Killed":         { color: "#ff8c42", size: 8,   alpha: 1.0,  shape: "cross",  glow: "rgba(255,140,66,0.9)"   },
+  "BotKill":        { color: "#ffd23f", size: 7,   alpha: 1.0,  shape: "circle", glow: "rgba(255,210,63,0.85)"  },
+  "BotKilled":      { color: "#bf5fff", size: 7,   alpha: 1.0,  shape: "circle", glow: "rgba(191,95,255,0.85)"  },
+  "KilledByStorm":  { color: "#00d4ff", size: 9,   alpha: 1.0,  shape: "bolt",   glow: "rgba(0,212,255,0.95)"   },
+  "Loot":           { color: "#39ff85", size: 6,   alpha: 1.0,  shape: "diamond",glow: "rgba(57,255,133,0.85)"  },
 };
 
-// Player colors for path drawing
+// Player path colors — vivid, distinct
 const PLAYER_COLORS = [
-  "#4f7af8","#f472b6","#34d399","#fb923c","#a78bfa","#f87171",
-  "#38bdf8","#facc15","#a3e635","#e879f9","#22d3ee","#fca5a5",
+  "#4d8bff","#ff3d5a","#39ff85","#ff8c42","#bf5fff","#ffd23f",
+  "#00d4ff","#ff66aa","#66ffcc","#ffaa33","#aa66ff","#55ddff",
 ];
 
 // ─── Canvas helpers ───────────────────────────────────────────────────────
@@ -319,7 +718,7 @@ function computeMapTransform() {
 function mapToCanvas(px, py) {
   return [
     state.offsetX + px * state.scale,
-    state.offsetY + py * state.scale
+    state.offsetY + py * state.scale,
   ];
 }
 
@@ -329,9 +728,9 @@ function redraw() {
   if (state.heatmapData) drawHeatmap();
   if (state.visibleEvents.length === 0) return;
 
-  const showPaths   = document.getElementById("tog-show-paths").checked;
-  const showBots    = document.getElementById("tog-show-bots").checked;
-  const showHumans  = document.getElementById("tog-show-humans").checked;
+  const showPaths  = document.getElementById("tog-show-paths").checked;
+  const showBots   = document.getElementById("tog-show-bots").checked;
+  const showHumans = document.getElementById("tog-show-humans").checked;
 
   // Group by user for path drawing
   if (showPaths) {
@@ -348,10 +747,13 @@ function redraw() {
       const pts = byUser[uid];
       if (pts.length < 2) return;
       const color = PLAYER_COLORS[i % PLAYER_COLORS.length];
+      ctx.save();
       ctx.beginPath();
       ctx.strokeStyle = color;
-      ctx.globalAlpha = 0.3;
-      ctx.lineWidth = 1.2;
+      ctx.globalAlpha = 0.55;
+      ctx.lineWidth = 1.5;
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 4;
       const [x0, y0] = mapToCanvas(pts[0].px, pts[0].py);
       ctx.moveTo(x0, y0);
       for (let j = 1; j < pts.length; j++) {
@@ -359,12 +761,23 @@ function redraw() {
         ctx.lineTo(x, y);
       }
       ctx.stroke();
-      ctx.globalAlpha = 1;
+      ctx.restore();
     });
   }
 
-  // Draw event markers
-  for (const ev of state.visibleEvents) {
+  // Draw event markers (back to front: positions first, then kills/events)
+  const posEvents  = state.visibleEvents.filter(e => ["Position","BotPosition"].includes(e.event));
+  const mainEvents = state.visibleEvents.filter(e => !["Position","BotPosition"].includes(e.event));
+
+  for (const ev of posEvents) {
+    if (ev.is_bot && !showBots) continue;
+    if (!ev.is_bot && !showHumans) continue;
+    const cfg = EVENT_CFG[ev.event];
+    if (!cfg) continue;
+    const [cx, cy] = mapToCanvas(ev.px, ev.py);
+    drawMarker(ctx, cx, cy, cfg, ev.is_bot);
+  }
+  for (const ev of mainEvents) {
     if (ev.is_bot && !showBots) continue;
     if (!ev.is_bot && !showHumans) continue;
     const cfg = EVENT_CFG[ev.event];
@@ -375,14 +788,17 @@ function redraw() {
 }
 
 function drawMarker(ctx, x, y, cfg, isBot) {
+  ctx.save();
   ctx.globalAlpha = cfg.alpha;
   ctx.fillStyle = cfg.color;
+  ctx.strokeStyle = cfg.color;
+  ctx.shadowColor = cfg.glow;
+  ctx.shadowBlur = cfg.shape === "circle" && cfg.size <= 3 ? 6 : 14;
   const s = cfg.size;
 
   if (cfg.shape === "circle") {
     ctx.beginPath();
     if (isBot) {
-      // Bot = triangle
       ctx.moveTo(x, y - s);
       ctx.lineTo(x + s, y + s);
       ctx.lineTo(x - s, y + s);
@@ -393,15 +809,29 @@ function drawMarker(ctx, x, y, cfg, isBot) {
     ctx.fill();
   } else if (cfg.shape === "star") {
     drawStar(ctx, x, y, s);
+    // white centre dot for contrast
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = "#fff";
+    ctx.beginPath();
+    ctx.arc(x, y, s * 0.22, 0, Math.PI * 2);
+    ctx.fill();
   } else if (cfg.shape === "cross") {
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = cfg.color;
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = "round";
     ctx.beginPath();
     ctx.moveTo(x - s, y - s); ctx.lineTo(x + s, y + s);
     ctx.moveTo(x + s, y - s); ctx.lineTo(x - s, y + s);
     ctx.stroke();
+    // bright centre
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 0.9;
+    ctx.fillStyle = "#fff";
+    ctx.beginPath();
+    ctx.arc(x, y, s * 0.25, 0, Math.PI * 2);
+    ctx.fill();
   } else if (cfg.shape === "bolt") {
-    ctx.font = `bold ${s * 2}px serif`;
+    ctx.font = `bold ${s * 2.2}px serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText("⚡", x, y);
@@ -409,14 +839,24 @@ function drawMarker(ctx, x, y, cfg, isBot) {
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(Math.PI / 4);
-    ctx.fillRect(-s * 0.7, -s * 0.7, s * 1.4, s * 1.4);
+    ctx.beginPath();
+    const d = s * 0.8;
+    ctx.rect(-d, -d, d * 2, d * 2);
+    ctx.fill();
     ctx.restore();
+    // bright centre dot
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = "#fff";
+    ctx.beginPath();
+    ctx.arc(x, y, s * 0.2, 0, Math.PI * 2);
+    ctx.fill();
   }
-  ctx.globalAlpha = 1;
+  ctx.restore();
 }
 
 function drawStar(ctx, x, y, size) {
-  const spikes = 5, outer = size, inner = size * 0.4;
+  const spikes = 5, outer = size, inner = size * 0.38;
   let rot = (Math.PI / 2) * 3;
   const step = Math.PI / spikes;
   ctx.beginPath();
@@ -436,12 +876,28 @@ function drawHeatmap() {
   const { grid, max } = state.heatmapData;
   if (!grid || grid.length === 0) return;
   const cellSize = (1024 / 64) * state.scale;
+
   for (const pt of grid) {
-    const intensity = pt.value / max;
+    const t = pt.value / max;
     const [cx, cy] = mapToCanvas(pt.x, pt.y);
-    const r = Math.round(255 * Math.min(intensity * 2, 1));
-    const g = Math.round(255 * Math.max(1 - intensity * 2, 0));
-    ctx.fillStyle = `rgba(${r},${g},30,${0.15 + intensity * 0.45})`;
+
+    // Vivid colour ramp: blue → cyan → green → yellow → orange → red
+    let r, g, b;
+    if (t < 0.25) {
+      const f = t / 0.25;
+      r = 0; g = Math.round(100 * f); b = 255;
+    } else if (t < 0.5) {
+      const f = (t - 0.25) / 0.25;
+      r = 0; g = Math.round(100 + 155 * f); b = Math.round(255 * (1 - f));
+    } else if (t < 0.75) {
+      const f = (t - 0.5) / 0.25;
+      r = Math.round(255 * f); g = 255; b = 0;
+    } else {
+      const f = (t - 0.75) / 0.25;
+      r = 255; g = Math.round(255 * (1 - f)); b = 0;
+    }
+    const alpha = 0.18 + t * 0.55;
+    ctx.fillStyle = `rgba(${r},${g},${b},${alpha})`;
     ctx.fillRect(cx - cellSize / 2, cy - cellSize / 2, cellSize, cellSize);
   }
 }
@@ -481,11 +937,12 @@ function togglePlay() {
   if (state.playing) {
     clearInterval(playInterval);
     state.playing = false;
-    btn.textContent = "▶ Play Match Timeline";
+    btn.textContent = "▶  Play Match Timeline";
+    btn.classList.remove("playing");
   } else {
     state.playing = true;
-    btn.textContent = "⏸ Pause";
-    // Reset to 0 if at end
+    btn.textContent = "⏸  Pause";
+    btn.classList.add("playing");
     const tl = document.getElementById("timeline");
     if (parseInt(tl.value) >= 100) tl.value = 0;
     playInterval = setInterval(() => {
@@ -494,7 +951,8 @@ function togglePlay() {
       if (v > 100) {
         clearInterval(playInterval);
         state.playing = false;
-        btn.textContent = "▶ Play Match Timeline";
+        btn.textContent = "▶  Play Match Timeline";
+        btn.classList.remove("playing");
         return;
       }
       tl.value = v;
@@ -551,7 +1009,7 @@ async function loadMatches() {
   document.getElementById("match-count").textContent = `(${matches.length})`;
 
   if (matches.length === 0) {
-    list.innerHTML = '<p style="color:#4a5568;font-size:11px;">No matches found</p>';
+    list.innerHTML = '<p style="color:var(--text-muted);font-size:11px;">No matches found</p>';
     return;
   }
 
@@ -559,8 +1017,12 @@ async function loadMatches() {
     const div = document.createElement("div");
     div.className = "match-item";
     div.innerHTML = `
-      <div class="mid">${m.match_id.substring(0,18)}…</div>
-      <div class="minfo">👤 ${m.humans} humans · 🤖 ${m.bots} bots · ${m.events} events</div>
+      <div class="mid">${m.match_id.substring(0,20)}…</div>
+      <div class="mbadges">
+        <span class="badge humans">👤 ${m.humans}</span>
+        <span class="badge bots">🤖 ${m.bots}</span>
+        <span class="badge events">⚡ ${m.events}</span>
+      </div>
     `;
     div.addEventListener("click", () => selectMatch(m, div));
     list.appendChild(div);
@@ -574,11 +1036,15 @@ async function selectMatch(matchMeta, el) {
   state.currentMatch = matchMeta.match_id;
   state.currentMap   = matchMeta.map;
 
-  document.getElementById("tb-map").textContent   = matchMeta.map;
-  document.getElementById("tb-match").textContent = matchMeta.match_id.substring(0,16) + "…";
+  const tbMap = document.getElementById("tb-map");
+  const tbMatch = document.getElementById("tb-match");
+  tbMap.textContent   = matchMeta.map;
+  tbMap.classList.add("active");
+  tbMatch.textContent = matchMeta.match_id.substring(0,20) + "…";
+  tbMatch.classList.add("active");
+
   document.getElementById("empty-state").style.display = "none";
 
-  // Load minimap if needed
   if (!state.minimapLoaded || state.lastMap !== matchMeta.map) {
     showLoading("Loading minimap...");
     const res = await api(`/api/minimap/${matchMeta.map}`);
@@ -591,7 +1057,6 @@ async function selectMatch(matchMeta, el) {
     state.lastMap = matchMeta.map;
   }
 
-  // Load events
   showLoading("Loading events...");
   const events = await api(`/api/match/${matchMeta.match_id}`);
   hideLoading();
@@ -608,7 +1073,6 @@ async function selectMatch(matchMeta, el) {
   updateStats(events);
   applyTimeline();
 
-  // Auto-load heatmap for current map
   const heatSel = document.getElementById("heatmap-select");
   if (heatSel.value) loadHeatmap();
 }
@@ -646,10 +1110,10 @@ canvas.addEventListener("mousemove", (e) => {
   const rect = canvas.getBoundingClientRect();
   const mx = e.clientX - rect.left;
   const my = e.clientY - rect.top;
-  const HIT = 12;
+  const HIT = 14;
 
   let found = null;
-  for (const ev of state.visibleEvents) {
+  for (const ev of [...state.visibleEvents].reverse()) {
     if (["Position","BotPosition"].includes(ev.event)) continue;
     const [cx, cy] = mapToCanvas(ev.px, ev.py);
     if (Math.abs(cx - mx) < HIT && Math.abs(cy - my) < HIT) {
@@ -661,11 +1125,11 @@ canvas.addEventListener("mousemove", (e) => {
   const tip = document.getElementById("tooltip");
   if (found) {
     tip.style.display = "block";
-    tip.style.left = (e.clientX + 12) + "px";
-    tip.style.top  = (e.clientY - 10) + "px";
+    tip.style.left = (e.clientX + 14) + "px";
+    tip.style.top  = (e.clientY - 12) + "px";
     document.getElementById("tt-title").textContent  = found.event;
     document.getElementById("tt-event").textContent  = found.is_bot ? "🤖 Bot" : "👤 Human";
-    document.getElementById("tt-pos").textContent    = `t=${fmtMs(found.ts_rel)}`;
+    document.getElementById("tt-pos").textContent    = `t = ${fmtMs(found.ts_rel)}`;
   } else {
     tip.style.display = "none";
   }
