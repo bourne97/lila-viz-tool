@@ -82,8 +82,8 @@ def load_all_data():
     # Clean up match_id (strip .nakama-0 suffix for display)
     DATA["match_id_clean"] = DATA["match_id"].str.replace(r"\.nakama-0$", "", regex=True)
 
-    # ts to ms integer for timeline
-    DATA["ts_ms"] = DATA["ts"].astype(np.int64) // 1_000_000
+    # ts is datetime64[ms] — casting to int64 gives ms since epoch directly
+    DATA["ts_ms"] = DATA["ts"].astype(np.int64)
 
     print(f"✓ Loaded {total:,} events from {len(frames)} files")
     print(f"  Maps: {DATA['map_id'].unique().tolist()}")
