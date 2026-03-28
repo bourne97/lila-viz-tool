@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LILA BLACK — Player Journey Visualizer</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0d0f14; color: #e2e8f0; font-family: 'Segoe UI', system-ui, sans-serif; display: flex; height: 100vh; overflow: hidden; }
+
+  /* ── Sidebar ── */
+  #sidebar {
+    width: 280px; min-width: 280px; background: #161a24; border-right: 1px solid #2a2f3e;
+    display: flex; flex-direction: column; overflow-y: auto; z-index: 10;
+  }
+  #sidebar-header { padding: 16px; background: #1e2330; border-bottom: 1px solid #2a2f3e; }
+  #sidebar-header h1 { font-size: 15px; font-weight: 700; color: #fff; letter-spacing: 0.5px; }
+  #sidebar-header p { font-size: 11px; color: #64748b; margin-top: 2px; }
+
+  .section { padding: 14px 16px; border-bottom: 1px solid #1e2330; }
+  .section-title { font-size: 10px; font-weight: 700; color: #64748b; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 10px; }
+
+  select, button {
+    width: 100%; padding: 8px 10px; background: #1e2330; border: 1px solid #2a2f3e;
+    color: #e2e8f0; border-radius: 6px; font-size: 12px; cursor: pointer; margin-bottom: 6px;
+  }
+  select:focus, button:focus { outline: none; border-color: #4f7af8; }
+  button:hover { background: #252c3e; }
+  button.active { background: #1e3a8a; border-color: #4f7af8; color: #93c5fd; }
+  button.danger { background: #7f1d1d; border-color: #ef4444; color: #fca5a5; }
+
+  .toggle-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; cursor: pointer; }
+  .toggle-row input[type=checkbox] { accent-color: #4f7af8; width: 14px; height: 14px; cursor: pointer; }
+  .toggle-row label { font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; flex: 1; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+  .diamond { width: 10px; height: 10px; display: inline-block; transform: rotate(45deg); flex-shrink: 0; }
+  .cross { font-size: 12px; font-weight: bold; }
+
+  #stats-box { background: #1e2330; border-radius: 6px; padding: 10px; font-size: 11px; }
+  #stats-box .stat-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+  #stats-box .stat-label { color: #64748b; }
+  #stats-box .stat-val { color: #e2e8f0; font-weight: 600; }
+
+  /* Match list */
+  #match-list { max-height: 220px; overflow-y: auto; }
+  .match-item {
+    padding: 8px 10px; border-radius: 6px; margin-bottom: 4px; cursor: pointer;
+    background: #1e2330; border: 1px solid transparent; font-size: 11px;
+    transition: all 0.15s;
+  }
+  .match-item:hover { border-color: #4f7af8; }
+  .match-item.selected { background: #1e3a8a; border-color: #4f7af8; }
+  .match-item .mid { color: #94a3b8; font-family: monospace; font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .match-item .minfo { color: #64748b; font-size: 10px; margin-top: 2px; }
+
+  /* Timeline */
+  #timeline-wrap { padding: 12px 16px; border-bottom: 1px solid #1e2330; }
+  #timeline { width: 100%; accent-color: #4f7af8; cursor: pointer; }
+  #timeline-labels { display: flex; justify-content: space-between; font-size: 10px; color: #64748b; margin-top: 4px; }
+  #play-btn { width: 100%; margin-top: 8px; background: #1e3a8a; border-color: #4f7af8; color: #93c5fd; }
+  #play-btn:hover { background: #1e40af; }
+
+  /* ── Main area ── */
+  #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+  #toolbar {
+    height: 44px; background: #161a24; border-bottom: 1px solid #2a2f3e;
+    display: flex; align-items: center; padding: 0 16px; gap: 12px;
+  }
+  #toolbar span { font-size: 11px; color: #64748b; }
+  #toolbar .tag { background: #1e2330; border: 1px solid #2a2f3e; border-radius: 4px; padding: 3px 8px; font-size: 11px; }
+  #match-summary { display: flex; gap: 16px; margin-left: auto; }
+  .summary-pill { background: #1e2330; border-radius: 4px; padding: 3px 8px; font-size: 11px; }
+
+  #canvas-wrap {
+    flex: 1; position: relative; overflow: hidden; background: #0d0f14;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #minimap-img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; }
+  #canvas-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+
+  #empty-state {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    text-align: center; color: #374151;
+  }
+  #empty-state h2 { font-size: 20px; margin-bottom: 8px; }
+  #empty-state p { font-size: 13px; }
+
+  #loading-overlay {
+    position: absolute; inset: 0; background: rgba(13,15,20,0.85);
+    display: flex; align-items: center; justify-content: center; z-index: 100;
+  }
+  .spinner { width: 32px; height: 32px; border: 3px solid #2a2f3e; border-top-color: #4f7af8; border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #loading-text { color: #94a3b8; margin-left: 12px; font-size: 13px; }
+
+  /* Tooltip */
+  #tooltip {
+    position: fixed; background: #1e2330; border: 1px solid #4f7af8; border-radius: 6px;
+    padding: 8px 12px; font-size: 11px; pointer-events: none; z-index: 200; display: none;
+    max-width: 220px;
+  }
+  #tooltip .tt-title { font-weight: 700; color: #93c5fd; margin-bottom: 4px; }
+  #tooltip .tt-row { color: #94a3b8; }
+
+  /* Legend */
+  #legend { padding: 10px 16px; border-top: 1px solid #1e2330; }
+  .legend-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .legend-item { display: flex; align-items: center; gap: 4px; font-size: 10px; color: #64748b; }
+
+  scrollbar-width: thin;
+  scrollbar-color: #2a2f3e #0d0f14;
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<div id="sidebar">
+  <div id="sidebar-header">
+    <h1>⚡ LILA BLACK</h1>
+    <p>Player Journey Visualizer</p>
+  </div>
+
+  <!-- Filters -->
+  <div class="section">
+    <div class="section-title">Filters</div>
+    <select id="map-select"><option value="">— Select Map —</option></select>
+    <select id="date-select"><option value="">All Dates</option></select>
+    <button id="load-matches-btn">Load Matches</button>
+  </div>
+
+  <!-- Match list -->
+  <div class="section">
+    <div class="section-title">Matches <span id="match-count" style="color:#4f7af8"></span></div>
+    <div id="match-list"><p style="color:#4a5568;font-size:11px;">Select filters above and click Load Matches</p></div>
+  </div>
+
+  <!-- Event toggles -->
+  <div class="section">
+    <div class="section-title">Event Types</div>
+    <div class="toggle-row">
+      <input type="checkbox" id="tog-Position" checked>
+      <label for="tog-Position"><span class="dot" style="background:#3b82f6;opacity:0.5"></span> Movement (Human)</label>
+    </div>
+    <div class="toggle-row">
+      <input type="checkbox" id="tog-BotPosition">
+      <label for="tog-BotPosition"><span class="dot" style="background:#8b5cf6;opacity:0.5"></span> Movement (Bot)</label>
+    </div>
+    <div class="toggle-row">
+      <input type="checkbox" id="tog-Kill" checked>
+      <label for="tog-Kill"><span class="dot" style="background:#ef4444"></span> Kill (PvP)</label>
+    </div>
+    <div class="toggle-row">
+      <input type="checkbox" id="tog-Killed" checked>
+      <label for="tog-Killed"><span class="dot" style="background:#f97316"></span> Killed (PvP Death)</label>
+    </div>
+    <div class="toggle-row">
+      <input type="checkbox" id="tog-BotKill" checked>
+      <label for="tog-BotKill"><span class="dot" style="background:#eab308"></span> Bot Kill</label>
+    </div>
+    <div class="toggle-row">
+      <input type="checkbox" id="tog-BotKilled" checked>
+      <label for="tog-BotKilled"><span class="dot" style="background:#a855f7"></span> Killed by Bot</label>
+    </div>
+    <div class="toggle-row">
+      <input type="checkbox" id="tog-KilledByStorm" checked>
+      <label for="tog-KilledByStorm"><span class="dot" style="background:#06b6d4"></span> Storm Death</label>
+    </div>
+    <div class="toggle-row">
+      <input type="checkbox" id="tog-Loot" checked>
+      <label for="tog-Loot"><span class="dot" style="background:#22c55e"></span> Loot</label>
+    </div>
+    <button id="apply-filters-btn" style="margin-top:6px">Apply Filters</button>
+  </div>
+
+  <!-- Heatmap -->
+  <div class="section">
+    <div class="section-title">Heatmap Overlay</div>
+    <select id="heatmap-select">
+      <option value="">— Off —</option>
+      <option value="Kill">Kill Zones</option>
+      <option value="Killed">Death Zones</option>
+      <option value="KilledByStorm">Storm Deaths</option>
+      <option value="Loot">Loot Density</option>
+      <option value="Position">Player Traffic</option>
+    </select>
+    <button id="load-heatmap-btn">Load Heatmap</button>
+  </div>
+
+  <!-- Display options -->
+  <div class="section">
+    <div class="section-title">Display</div>
+    <div class="toggle-row">
+      <input type="checkbox" id="tog-show-paths" checked>
+      <label for="tog-show-paths">Show movement paths</label>
+    </div>
+    <div class="toggle-row">
+      <input type="checkbox" id="tog-show-bots">
+      <label for="tog-show-bots">Show bots</label>
+    </div>
+    <div class="toggle-row">
+      <input type="checkbox" id="tog-show-humans" checked>
+      <label for="tog-show-humans">Show humans</label>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="section">
+    <div class="section-title">Match Stats</div>
+    <div id="stats-box">
+      <div class="stat-row"><span class="stat-label">Events</span><span class="stat-val" id="s-events">—</span></div>
+      <div class="stat-row"><span class="stat-label">Humans</span><span class="stat-val" id="s-humans">—</span></div>
+      <div class="stat-row"><span class="stat-label">Bots</span><span class="stat-val" id="s-bots">—</span></div>
+      <div class="stat-row"><span class="stat-label">PvP Kills</span><span class="stat-val" id="s-kills">—</span></div>
+      <div class="stat-row"><span class="stat-label">Storm Deaths</span><span class="stat-val" id="s-storm">—</span></div>
+      <div class="stat-row"><span class="stat-label">Loot Events</span><span class="stat-val" id="s-loot">—</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN AREA -->
+<div id="main">
+  <div id="toolbar">
+    <span id="tb-map" class="tag">No map selected</span>
+    <span id="tb-match" class="tag">No match selected</span>
+    <div id="match-summary">
+      <span class="summary-pill" id="pill-timeline">⏱ —</span>
+    </div>
+  </div>
+
+  <!-- Timeline -->
+  <div id="timeline-wrap">
+    <input type="range" id="timeline" min="0" max="100" value="100" step="1">
+    <div id="timeline-labels"><span id="tl-min">0s</span><span id="tl-current">—</span><span id="tl-max">—</span></div>
+    <button id="play-btn">▶ Play Match Timeline</button>
+  </div>
+
+  <!-- Canvas -->
+  <div id="canvas-wrap">
+    <img id="minimap-img" src="" alt="" style="display:none">
+    <canvas id="canvas-overlay"></canvas>
+    <div id="empty-state">
+      <h2>Select a match to begin</h2>
+      <p>Choose a map and date from the sidebar, then select a match</p>
+    </div>
+    <div id="loading-overlay" style="display:none">
+      <div class="spinner"></div>
+      <span id="loading-text">Loading...</span>
+    </div>
+  </div>
+</div>
+
+<div id="tooltip">
+  <div class="tt-title" id="tt-title"></div>
+  <div class="tt-row" id="tt-event"></div>
+  <div class="tt-row" id="tt-pos"></div>
+</div>
+
+<script>
+// ─── State ────────────────────────────────────────────────────────────────
+const state = {
+  currentMap: null,
+  currentMatch: null,
+  allEvents: [],        // raw events from API
+  visibleEvents: [],    // filtered by toggles + timeline
+  heatmapData: null,
+  timelineMax: 0,
+  timelineVal: 100,
+  playing: false,
+  playTimer: null,
+  minimapLoaded: false,
+  canvasW: 0,
+  canvasH: 0,
+  scale: 1,
+  offsetX: 0,
+  offsetY: 0,
+};
+
+// ─── Event config ─────────────────────────────────────────────────────────
+const EVENT_CFG = {
+  "Position":       { color: "#3b82f6", size: 2,  alpha: 0.35, shape: "circle" },
+  "BotPosition":    { color: "#8b5cf6", size: 2,  alpha: 0.25, shape: "circle" },
+  "Kill":           { color: "#ef4444", size: 7,  alpha: 0.9,  shape: "star"   },
+  "Killed":         { color: "#f97316", size: 7,  alpha: 0.9,  shape: "cross"  },
+  "BotKill":        { color: "#eab308", size: 6,  alpha: 0.9,  shape: "circle" },
+  "BotKilled":      { color: "#a855f7", size: 6,  alpha: 0.9,  shape: "circle" },
+  "KilledByStorm":  { color: "#06b6d4", size: 8,  alpha: 0.95, shape: "bolt"   },
+  "Loot":           { color: "#22c55e", size: 5,  alpha: 0.85, shape: "diamond"},
+};
+
+// Player colors for path drawing
+const PLAYER_COLORS = [
+  "#4f7af8","#f472b6","#34d399","#fb923c","#a78bfa","#f87171",
+  "#38bdf8","#facc15","#a3e635","#e879f9","#22d3ee","#fca5a5",
+];
+
+// ─── Canvas helpers ───────────────────────────────────────────────────────
+const canvas = document.getElementById("canvas-overlay");
+const ctx = canvas.getContext("2d");
+
+function resizeCanvas() {
+  const wrap = document.getElementById("canvas-wrap");
+  canvas.width  = wrap.clientWidth;
+  canvas.height = wrap.clientHeight;
+  computeMapTransform();
+  redraw();
+}
+
+function computeMapTransform() {
+  const img = document.getElementById("minimap-img");
+  if (!img || !img.naturalWidth) return;
+  const cw = canvas.width, ch = canvas.height;
+  const iw = img.naturalWidth || 1024, ih = img.naturalHeight || 1024;
+  state.scale   = Math.min(cw / iw, ch / ih);
+  state.offsetX = (cw - iw * state.scale) / 2;
+  state.offsetY = (ch - ih * state.scale) / 2;
+}
+
+function mapToCanvas(px, py) {
+  return [
+    state.offsetX + px * state.scale,
+    state.offsetY + py * state.scale
+  ];
+}
+
+// ─── Drawing ──────────────────────────────────────────────────────────────
+function redraw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (state.heatmapData) drawHeatmap();
+  if (state.visibleEvents.length === 0) return;
+
+  const showPaths   = document.getElementById("tog-show-paths").checked;
+  const showBots    = document.getElementById("tog-show-bots").checked;
+  const showHumans  = document.getElementById("tog-show-humans").checked;
+
+  // Group by user for path drawing
+  if (showPaths) {
+    const byUser = {};
+    for (const ev of state.visibleEvents) {
+      if (!["Position","BotPosition"].includes(ev.event)) continue;
+      if (ev.is_bot && !showBots) continue;
+      if (!ev.is_bot && !showHumans) continue;
+      if (!byUser[ev.user_id]) byUser[ev.user_id] = [];
+      byUser[ev.user_id].push(ev);
+    }
+    const userKeys = Object.keys(byUser);
+    userKeys.forEach((uid, i) => {
+      const pts = byUser[uid];
+      if (pts.length < 2) return;
+      const color = PLAYER_COLORS[i % PLAYER_COLORS.length];
+      ctx.beginPath();
+      ctx.strokeStyle = color;
+      ctx.globalAlpha = 0.3;
+      ctx.lineWidth = 1.2;
+      const [x0, y0] = mapToCanvas(pts[0].px, pts[0].py);
+      ctx.moveTo(x0, y0);
+      for (let j = 1; j < pts.length; j++) {
+        const [x, y] = mapToCanvas(pts[j].px, pts[j].py);
+        ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    });
+  }
+
+  // Draw event markers
+  for (const ev of state.visibleEvents) {
+    if (ev.is_bot && !showBots) continue;
+    if (!ev.is_bot && !showHumans) continue;
+    const cfg = EVENT_CFG[ev.event];
+    if (!cfg) continue;
+    const [cx, cy] = mapToCanvas(ev.px, ev.py);
+    drawMarker(ctx, cx, cy, cfg, ev.is_bot);
+  }
+}
+
+function drawMarker(ctx, x, y, cfg, isBot) {
+  ctx.globalAlpha = cfg.alpha;
+  ctx.fillStyle = cfg.color;
+  const s = cfg.size;
+
+  if (cfg.shape === "circle") {
+    ctx.beginPath();
+    if (isBot) {
+      // Bot = triangle
+      ctx.moveTo(x, y - s);
+      ctx.lineTo(x + s, y + s);
+      ctx.lineTo(x - s, y + s);
+      ctx.closePath();
+    } else {
+      ctx.arc(x, y, s, 0, Math.PI * 2);
+    }
+    ctx.fill();
+  } else if (cfg.shape === "star") {
+    drawStar(ctx, x, y, s);
+  } else if (cfg.shape === "cross") {
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = cfg.color;
+    ctx.beginPath();
+    ctx.moveTo(x - s, y - s); ctx.lineTo(x + s, y + s);
+    ctx.moveTo(x + s, y - s); ctx.lineTo(x - s, y + s);
+    ctx.stroke();
+  } else if (cfg.shape === "bolt") {
+    ctx.font = `bold ${s * 2}px serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("⚡", x, y);
+  } else if (cfg.shape === "diamond") {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(Math.PI / 4);
+    ctx.fillRect(-s * 0.7, -s * 0.7, s * 1.4, s * 1.4);
+    ctx.restore();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawStar(ctx, x, y, size) {
+  const spikes = 5, outer = size, inner = size * 0.4;
+  let rot = (Math.PI / 2) * 3;
+  const step = Math.PI / spikes;
+  ctx.beginPath();
+  ctx.moveTo(x, y - outer);
+  for (let i = 0; i < spikes; i++) {
+    ctx.lineTo(x + Math.cos(rot) * outer, y + Math.sin(rot) * outer);
+    rot += step;
+    ctx.lineTo(x + Math.cos(rot) * inner, y + Math.sin(rot) * inner);
+    rot += step;
+  }
+  ctx.lineTo(x, y - outer);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawHeatmap() {
+  const { grid, max } = state.heatmapData;
+  if (!grid || grid.length === 0) return;
+  const cellSize = (1024 / 64) * state.scale;
+  for (const pt of grid) {
+    const intensity = pt.value / max;
+    const [cx, cy] = mapToCanvas(pt.x, pt.y);
+    const r = Math.round(255 * Math.min(intensity * 2, 1));
+    const g = Math.round(255 * Math.max(1 - intensity * 2, 0));
+    ctx.fillStyle = `rgba(${r},${g},30,${0.15 + intensity * 0.45})`;
+    ctx.fillRect(cx - cellSize / 2, cy - cellSize / 2, cellSize, cellSize);
+  }
+}
+
+// ─── Timeline ─────────────────────────────────────────────────────────────
+function applyTimeline() {
+  const val = parseInt(document.getElementById("timeline").value);
+  state.timelineVal = val;
+  const maxTs = state.timelineMax;
+  const cutoff = (val / 100) * maxTs;
+
+  const toggledEvents = getToggledEventTypes();
+  state.visibleEvents = state.allEvents.filter(ev =>
+    toggledEvents.includes(ev.event) && ev.ts_rel <= cutoff
+  );
+
+  document.getElementById("tl-current").textContent = fmtMs(cutoff);
+  redraw();
+}
+
+function getToggledEventTypes() {
+  return Object.keys(EVENT_CFG).filter(k => {
+    const el = document.getElementById(`tog-${k}`);
+    return el && el.checked;
+  });
+}
+
+function fmtMs(ms) {
+  const s = Math.floor(ms / 1000);
+  const m = Math.floor(s / 60);
+  return `${m}:${String(s % 60).padStart(2,"0")}`;
+}
+
+let playInterval = null;
+function togglePlay() {
+  const btn = document.getElementById("play-btn");
+  if (state.playing) {
+    clearInterval(playInterval);
+    state.playing = false;
+    btn.textContent = "▶ Play Match Timeline";
+  } else {
+    state.playing = true;
+    btn.textContent = "⏸ Pause";
+    // Reset to 0 if at end
+    const tl = document.getElementById("timeline");
+    if (parseInt(tl.value) >= 100) tl.value = 0;
+    playInterval = setInterval(() => {
+      const tl = document.getElementById("timeline");
+      const v = parseInt(tl.value) + 1;
+      if (v > 100) {
+        clearInterval(playInterval);
+        state.playing = false;
+        btn.textContent = "▶ Play Match Timeline";
+        return;
+      }
+      tl.value = v;
+      applyTimeline();
+    }, 150);
+  }
+}
+
+// ─── API calls ────────────────────────────────────────────────────────────
+async function api(path) {
+  const res = await fetch(path);
+  return res.json();
+}
+
+function showLoading(msg = "Loading...") {
+  document.getElementById("loading-overlay").style.display = "flex";
+  document.getElementById("loading-text").textContent = msg;
+}
+function hideLoading() {
+  document.getElementById("loading-overlay").style.display = "none";
+}
+
+async function initSelectors() {
+  const maps = await api("/api/maps");
+  const mapSel = document.getElementById("map-select");
+  maps.forEach(m => {
+    const opt = document.createElement("option");
+    opt.value = m; opt.textContent = m;
+    mapSel.appendChild(opt);
+  });
+
+  const dates = await api("/api/dates");
+  const dateSel = document.getElementById("date-select");
+  dates.forEach(d => {
+    const opt = document.createElement("option");
+    opt.value = d; opt.textContent = d.replace("_", " ");
+    dateSel.appendChild(opt);
+  });
+}
+
+async function loadMatches() {
+  const map  = document.getElementById("map-select").value;
+  const date = document.getElementById("date-select").value;
+  if (!map) { alert("Please select a map first"); return; }
+
+  showLoading("Loading matches...");
+  let url = `/api/matches?map=${encodeURIComponent(map)}`;
+  if (date) url += `&date=${encodeURIComponent(date)}`;
+  const matches = await api(url);
+  hideLoading();
+
+  const list = document.getElementById("match-list");
+  list.innerHTML = "";
+  document.getElementById("match-count").textContent = `(${matches.length})`;
+
+  if (matches.length === 0) {
+    list.innerHTML = '<p style="color:#4a5568;font-size:11px;">No matches found</p>';
+    return;
+  }
+
+  matches.forEach(m => {
+    const div = document.createElement("div");
+    div.className = "match-item";
+    div.innerHTML = `
+      <div class="mid">${m.match_id.substring(0,18)}…</div>
+      <div class="minfo">👤 ${m.humans} humans · 🤖 ${m.bots} bots · ${m.events} events</div>
+    `;
+    div.addEventListener("click", () => selectMatch(m, div));
+    list.appendChild(div);
+  });
+}
+
+async function selectMatch(matchMeta, el) {
+  document.querySelectorAll(".match-item").forEach(d => d.classList.remove("selected"));
+  el.classList.add("selected");
+
+  state.currentMatch = matchMeta.match_id;
+  state.currentMap   = matchMeta.map;
+
+  document.getElementById("tb-map").textContent   = matchMeta.map;
+  document.getElementById("tb-match").textContent = matchMeta.match_id.substring(0,16) + "…";
+  document.getElementById("empty-state").style.display = "none";
+
+  // Load minimap if needed
+  if (!state.minimapLoaded || state.lastMap !== matchMeta.map) {
+    showLoading("Loading minimap...");
+    const res = await api(`/api/minimap/${matchMeta.map}`);
+    const img = document.getElementById("minimap-img");
+    img.src = res.data;
+    img.style.display = "block";
+    await new Promise(r => img.onload = r);
+    computeMapTransform();
+    state.minimapLoaded = true;
+    state.lastMap = matchMeta.map;
+  }
+
+  // Load events
+  showLoading("Loading events...");
+  const events = await api(`/api/match/${matchMeta.match_id}`);
+  hideLoading();
+
+  state.allEvents = events;
+  state.timelineMax = events.length > 0 ? Math.max(...events.map(e => e.ts_rel)) : 0;
+
+  document.getElementById("timeline").value = 100;
+  document.getElementById("tl-max").textContent = fmtMs(state.timelineMax);
+  document.getElementById("tl-min").textContent = "0:00";
+  document.getElementById("tl-current").textContent = fmtMs(state.timelineMax);
+  document.getElementById("pill-timeline").textContent = `⏱ ${fmtMs(state.timelineMax)}`;
+
+  updateStats(events);
+  applyTimeline();
+
+  // Auto-load heatmap for current map
+  const heatSel = document.getElementById("heatmap-select");
+  if (heatSel.value) loadHeatmap();
+}
+
+function updateStats(events) {
+  const humans = new Set(events.filter(e => !e.is_bot).map(e => e.user_id)).size;
+  const bots   = new Set(events.filter(e => e.is_bot).map(e => e.user_id)).size;
+  const kills  = events.filter(e => e.event === "Kill").length;
+  const storm  = events.filter(e => e.event === "KilledByStorm").length;
+  const loot   = events.filter(e => e.event === "Loot").length;
+
+  document.getElementById("s-events").textContent  = events.length.toLocaleString();
+  document.getElementById("s-humans").textContent  = humans;
+  document.getElementById("s-bots").textContent    = bots;
+  document.getElementById("s-kills").textContent   = kills;
+  document.getElementById("s-storm").textContent   = storm;
+  document.getElementById("s-loot").textContent    = loot;
+}
+
+async function loadHeatmap() {
+  const map  = state.currentMap || document.getElementById("map-select").value;
+  const type = document.getElementById("heatmap-select").value;
+  if (!map || !type) { state.heatmapData = null; redraw(); return; }
+
+  showLoading("Loading heatmap...");
+  const data = await api(`/api/heatmap?map=${encodeURIComponent(map)}&event_type=${encodeURIComponent(type)}`);
+  hideLoading();
+  state.heatmapData = data;
+  redraw();
+}
+
+// ─── Tooltip on hover ─────────────────────────────────────────────────────
+canvas.addEventListener("mousemove", (e) => {
+  if (state.visibleEvents.length === 0) return;
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  const HIT = 12;
+
+  let found = null;
+  for (const ev of state.visibleEvents) {
+    if (["Position","BotPosition"].includes(ev.event)) continue;
+    const [cx, cy] = mapToCanvas(ev.px, ev.py);
+    if (Math.abs(cx - mx) < HIT && Math.abs(cy - my) < HIT) {
+      found = ev;
+      break;
+    }
+  }
+
+  const tip = document.getElementById("tooltip");
+  if (found) {
+    tip.style.display = "block";
+    tip.style.left = (e.clientX + 12) + "px";
+    tip.style.top  = (e.clientY - 10) + "px";
+    document.getElementById("tt-title").textContent  = found.event;
+    document.getElementById("tt-event").textContent  = found.is_bot ? "🤖 Bot" : "👤 Human";
+    document.getElementById("tt-pos").textContent    = `t=${fmtMs(found.ts_rel)}`;
+  } else {
+    tip.style.display = "none";
+  }
+});
+canvas.addEventListener("mouseleave", () => {
+  document.getElementById("tooltip").style.display = "none";
+});
+
+// ─── Wire up controls ─────────────────────────────────────────────────────
+document.getElementById("load-matches-btn").addEventListener("click", loadMatches);
+document.getElementById("apply-filters-btn").addEventListener("click", applyTimeline);
+document.getElementById("play-btn").addEventListener("click", togglePlay);
+document.getElementById("timeline").addEventListener("input", applyTimeline);
+document.getElementById("load-heatmap-btn").addEventListener("click", loadHeatmap);
+document.getElementById("heatmap-select").addEventListener("change", () => {
+  if (!document.getElementById("heatmap-select").value) {
+    state.heatmapData = null; redraw();
+  }
+});
+
+Object.keys(EVENT_CFG).forEach(k => {
+  const el = document.getElementById(`tog-${k}`);
+  if (el) el.addEventListener("change", applyTimeline);
+});
+["tog-show-paths","tog-show-bots","tog-show-humans"].forEach(id => {
+  document.getElementById(id).addEventListener("change", redraw);
+});
+
+window.addEventListener("resize", resizeCanvas);
+document.getElementById("minimap-img").addEventListener("load", () => {
+  computeMapTransform(); redraw();
+});
+
+// ─── Boot ─────────────────────────────────────────────────────────────────
+resizeCanvas();
+initSelectors();
+</script>
+</body>
+</html>
