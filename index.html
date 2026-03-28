@@ -378,6 +378,98 @@
     white-space: nowrap;
   }
 
+  /* ── Match summary bar ── */
+  #match-summary-bar {
+    display: none;
+    flex-shrink: 0;
+    padding: 0 14px;
+    height: 64px;
+    background: var(--bg-elevated);
+    border-bottom: 1px solid var(--border);
+    gap: 6px;
+    align-items: center;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+  #match-summary-bar.visible { display: flex; }
+  .msb-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 90px;
+    padding: 8px 14px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    gap: 3px;
+    flex-shrink: 0;
+    transition: border-color 0.15s;
+  }
+  .msb-card:hover { border-color: var(--border-lit); }
+  .msb-card.accent  { border-color: rgba(0,212,255,0.3); background: rgba(0,212,255,0.05); }
+  .msb-card.red     { border-color: rgba(255,61,90,0.3);  background: rgba(255,61,90,0.05);  }
+  .msb-card.yellow  { border-color: rgba(255,210,63,0.3); background: rgba(255,210,63,0.05); }
+  .msb-card.green   { border-color: rgba(57,255,133,0.3); background: rgba(57,255,133,0.05); }
+  .msb-card.purple  { border-color: rgba(191,95,255,0.3); background: rgba(191,95,255,0.05); }
+  .msb-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--text-primary);
+  }
+  .msb-card.accent .msb-val  { color: var(--accent); text-shadow: 0 0 10px var(--accent-glow); }
+  .msb-card.red    .msb-val  { color: var(--red);    text-shadow: 0 0 10px rgba(255,61,90,0.5); }
+  .msb-card.yellow .msb-val  { color: var(--yellow); text-shadow: 0 0 10px rgba(255,210,63,0.5); }
+  .msb-card.green  .msb-val  { color: var(--green);  text-shadow: 0 0 10px rgba(57,255,133,0.5); }
+  .msb-card.purple .msb-val  { color: var(--purple);  text-shadow: 0 0 10px rgba(191,95,255,0.5); }
+  .msb-label {
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+  .msb-sep {
+    width: 1px;
+    height: 36px;
+    background: var(--border);
+    flex-shrink: 0;
+    margin: 0 4px;
+  }
+  .msb-survivor-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 120px;
+    max-width: 180px;
+    padding: 6px 12px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    flex-shrink: 0;
+  }
+  .msb-survivor-title {
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    margin-bottom: 3px;
+  }
+  .msb-survivor-row {
+    font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--green);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .msb-survivor-row.bot { color: var(--purple); }
+  .msb-survivor-row.none { color: var(--text-muted); font-style: italic; }
+
   #canvas-wrap {
     flex: 1;
     position: relative;
@@ -625,6 +717,35 @@
     <span id="tb-match" class="tag" style="max-width:260px">No match selected</span>
     <div id="match-summary">
       <span class="summary-pill" id="pill-timeline">⏱ —</span>
+    </div>
+  </div>
+
+  <!-- Match summary bar -->
+  <div id="match-summary-bar">
+    <div class="msb-card accent">
+      <div class="msb-val" id="msb-duration">—</div>
+      <div class="msb-label">Duration</div>
+    </div>
+    <div class="msb-card red">
+      <div class="msb-val" id="msb-pvp-kills">—</div>
+      <div class="msb-label">PvP Kills</div>
+    </div>
+    <div class="msb-card yellow">
+      <div class="msb-val" id="msb-bot-kills">—</div>
+      <div class="msb-label">Bot Kills</div>
+    </div>
+    <div class="msb-card purple">
+      <div class="msb-val" id="msb-storm">—</div>
+      <div class="msb-label">Storm Deaths</div>
+    </div>
+    <div class="msb-sep"></div>
+    <div class="msb-card green">
+      <div class="msb-val" id="msb-survivors">—</div>
+      <div class="msb-label">Survivors</div>
+    </div>
+    <div class="msb-sep"></div>
+    <div class="msb-survivor-list" id="msb-survivor-list">
+      <div class="msb-survivor-title">Survived</div>
     </div>
   </div>
 
@@ -1066,6 +1187,7 @@ async function selectMatch(matchMeta, el) {
   document.getElementById("pill-timeline").textContent = `⏱ ${fmtMs(state.timelineMax)}`;
 
   updateStats(events);
+  updateMatchSummaryBar(events, state.timelineMax);
   applyTimeline();
 
   const heatSel = document.getElementById("heatmap-select");
@@ -1085,6 +1207,73 @@ function updateStats(events) {
   document.getElementById("s-kills").textContent   = kills;
   document.getElementById("s-storm").textContent   = storm;
   document.getElementById("s-loot").textContent    = loot;
+}
+
+function updateMatchSummaryBar(events, durationMs) {
+  const bar = document.getElementById("match-summary-bar");
+  bar.classList.add("visible");
+
+  // Duration
+  const durSec = durationMs / 1000;
+  const durStr = durSec < 60
+    ? `${durSec.toFixed(2)}s`
+    : `${Math.floor(durSec/60)}m ${(durSec%60).toFixed(0)}s`;
+  document.getElementById("msb-duration").textContent = durStr;
+
+  // Kill counts
+  const pvpKills  = events.filter(e => e.event === "Kill").length;
+  const botKills  = events.filter(e => e.event === "BotKill").length;
+  const stormDeaths = events.filter(e => e.event === "KilledByStorm").length;
+  document.getElementById("msb-pvp-kills").textContent  = pvpKills;
+  document.getElementById("msb-bot-kills").textContent  = botKills;
+  document.getElementById("msb-storm").textContent      = stormDeaths;
+
+  // Survivors: players who appear in events but never have a death event
+  const deathEvents = new Set(["Killed", "BotKilled", "KilledByStorm"]);
+  const allPlayers  = new Map(); // user_id → is_bot
+  const deadPlayers = new Set();
+
+  for (const ev of events) {
+    if (!allPlayers.has(ev.user_id)) allPlayers.set(ev.user_id, ev.is_bot);
+    if (deathEvents.has(ev.event)) deadPlayers.add(ev.user_id);
+  }
+
+  const survivors = [...allPlayers.entries()].filter(([uid]) => !deadPlayers.has(uid));
+  const humanSurvivors = survivors.filter(([, isBot]) => !isBot);
+  const botSurvivors   = survivors.filter(([, isBot]) => isBot);
+
+  document.getElementById("msb-survivors").textContent = survivors.length;
+
+  // Survivor list panel
+  const listEl = document.getElementById("msb-survivor-list");
+  listEl.innerHTML = '<div class="msb-survivor-title">Survived</div>';
+
+  if (survivors.length === 0) {
+    const row = document.createElement("div");
+    row.className = "msb-survivor-row none";
+    row.textContent = "No survivors";
+    listEl.appendChild(row);
+  } else {
+    humanSurvivors.slice(0, 4).forEach(([uid]) => {
+      const row = document.createElement("div");
+      row.className = "msb-survivor-row";
+      row.textContent = `👤 ${uid.substring(0, 16)}`;
+      listEl.appendChild(row);
+    });
+    botSurvivors.slice(0, 4).forEach(([uid]) => {
+      const row = document.createElement("div");
+      row.className = "msb-survivor-row bot";
+      row.textContent = `🤖 ${uid.substring(0, 16)}`;
+      listEl.appendChild(row);
+    });
+    const remaining = survivors.length - Math.min(humanSurvivors.length, 4) - Math.min(botSurvivors.length, 4);
+    if (remaining > 0) {
+      const row = document.createElement("div");
+      row.className = "msb-survivor-row none";
+      row.textContent = `+${remaining} more`;
+      listEl.appendChild(row);
+    }
+  }
 }
 
 async function loadHeatmap() {
