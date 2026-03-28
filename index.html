@@ -61,17 +61,12 @@
   }
 
   #sidebar-header {
-    padding: 18px 16px 14px;
+    padding: 20px 16px 16px;
     background: linear-gradient(180deg, #0a1520 0%, var(--bg-surface) 100%);
     border-bottom: 1px solid var(--border);
+    border-top: 2px solid var(--accent);
+    box-shadow: 0 0 16px var(--accent-glow) inset;
     position: relative;
-    overflow: hidden;
-  }
-  #sidebar-header::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0; height: 2px;
-    background: linear-gradient(90deg, transparent, var(--accent), transparent);
   }
   #sidebar-header .logo-row {
     display: flex;
